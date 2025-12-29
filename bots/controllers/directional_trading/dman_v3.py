@@ -163,9 +163,22 @@ class DManV3Controller(DirectionalTradingControllerBase):
         # Add indicators
         df.ta.bbands(length=self.config.bb_length, std=self.config.bb_std, append=True)
 
+        # pandas_ta versions may name BB columns as BBP_{length}_{std}
+        # or BBP_{length}_{std}_{std}. Normalize to the shorter name if needed.
+        bbp_base = f"BBP_{self.config.bb_length}_{self.config.bb_std}"
+        if bbp_base not in df.columns:
+            bbp_alt = f"{bbp_base}_{self.config.bb_std}"
+            if bbp_alt in df.columns:
+                df[bbp_base] = df[bbp_alt]
+        bbb_base = f"BBB_{self.config.bb_length}_{self.config.bb_std}"
+        if bbb_base not in df.columns:
+            bbb_alt = f"{bbb_base}_{self.config.bb_std}"
+            if bbb_alt in df.columns:
+                df[bbb_base] = df[bbb_alt]
+
         # Generate signal
-        long_condition = df[f"BBP_{self.config.bb_length}_{self.config.bb_std}"] < self.config.bb_long_threshold
-        short_condition = df[f"BBP_{self.config.bb_length}_{self.config.bb_std}"] > self.config.bb_short_threshold
+        long_condition = df[bbp_base] < self.config.bb_long_threshold
+        short_condition = df[bbp_base] > self.config.bb_short_threshold
 
         # Generate signal
         df["signal"] = 0
@@ -179,7 +192,12 @@ class DManV3Controller(DirectionalTradingControllerBase):
     def get_spread_multiplier(self) -> Decimal:
         if self.config.dynamic_order_spread:
             df = self.processed_data["features"]
-            bb_width = df[f"BBB_{self.config.bb_length}_{self.config.bb_std}"].iloc[-1]
+            bbb_base = f"BBB_{self.config.bb_length}_{self.config.bb_std}"
+            if bbb_base not in df.columns:
+                bbb_alt = f"{bbb_base}_{self.config.bb_std}"
+                if bbb_alt in df.columns:
+                    df[bbb_base] = df[bbb_alt]
+            bb_width = df[bbb_base].iloc[-1]
             return Decimal(bb_width / 200)
         else:
             return Decimal("1.0")

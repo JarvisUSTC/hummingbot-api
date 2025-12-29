@@ -65,6 +65,14 @@ class MACDBBV1Controller(DirectionalTradingControllerBase):
     def __init__(self, config: MACDBBV1ControllerConfig, *args, **kwargs):
         self.config = config
         self.max_records = max(config.macd_slow, config.macd_fast, config.macd_signal, config.bb_length) + 20
+
+        # Fallback: if validators did not populate candles_connector/trading_pair,
+        # default them to connector_name/trading_pair from the base config.
+        if not self.config.candles_connector:
+            self.config.candles_connector = self.config.connector_name
+        if not self.config.candles_trading_pair:
+            self.config.candles_trading_pair = self.config.trading_pair
+
         if len(self.config.candles_config) == 0:
             self.config.candles_config = [CandlesConfig(
                 connector=config.candles_connector,

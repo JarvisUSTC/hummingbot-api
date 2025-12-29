@@ -79,6 +79,13 @@ class PMMDynamicController(MarketMakingControllerBase):
     def __init__(self, config: PMMDynamicControllerConfig, *args, **kwargs):
         self.config = config
         self.max_records = max(config.macd_slow, config.macd_fast, config.macd_signal, config.natr_length) + 100
+
+        # Fallback: ensure candles_connector/trading_pair default to main connector/trading_pair
+        if not self.config.candles_connector:
+            self.config.candles_connector = self.config.connector_name
+        if not self.config.candles_trading_pair:
+            self.config.candles_trading_pair = self.config.trading_pair
+
         if len(self.config.candles_config) == 0:
             self.config.candles_config = [CandlesConfig(
                 connector=config.candles_connector,

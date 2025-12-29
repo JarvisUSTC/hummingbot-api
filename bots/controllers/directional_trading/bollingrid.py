@@ -84,6 +84,13 @@ class BollinGridController(DirectionalTradingControllerBase):
     def __init__(self, config: BollinGridControllerConfig, *args, **kwargs):
         self.config = config
         self.max_records = self.config.bb_length
+
+        # Fallback: ensure candles_connector/trading_pair default to main connector/trading_pair
+        if not self.config.candles_connector:
+            self.config.candles_connector = self.config.connector_name
+        if not self.config.candles_trading_pair:
+            self.config.candles_trading_pair = self.config.trading_pair
+
         if len(self.config.candles_config) == 0:
             self.config.candles_config = [CandlesConfig(
                 connector=config.candles_connector,
@@ -100,8 +107,21 @@ class BollinGridController(DirectionalTradingControllerBase):
                                                       max_records=self.max_records)
         # Add indicators
         df.ta.bbands(length=self.config.bb_length, std=self.config.bb_std, append=True)
-        bbp = df[f"BBP_{self.config.bb_length}_{self.config.bb_std}"]
-        bb_width = df[f"BBB_{self.config.bb_length}_{self.config.bb_std}"]
+
+        # Normalize BBP/BBB column names for different pandas_ta versions
+        bbp_base = f"BBP_{self.config.bb_length}_{self.config.bb_std}"
+        if bbp_base not in df.columns:
+            bbp_alt = f"{bbp_base}_{self.config.bb_std}"
+            if bbp_alt in df.columns:
+                df[bbp_base] = df[bbp_alt]
+        bbb_base = f"BBB_{self.config.bb_length}_{self.config.bb_std}"
+        if bbb_base not in df.columns:
+            bbb_alt = f"{bbb_base}_{self.config.bb_std}"
+            if bbb_alt in df.columns:
+                df[bbb_base] = df[bbb_alt]
+
+        bbp = df[bbp_base]
+        bb_width = df[bbb_base]
 
         # Generate signal
         long_condition = bbp < self.config.bb_long_threshold
