@@ -91,7 +91,14 @@ class MACDBBV1Controller(DirectionalTradingControllerBase):
         df.ta.bbands(length=self.config.bb_length, std=self.config.bb_std, append=True)
         df.ta.macd(fast=self.config.macd_fast, slow=self.config.macd_slow, signal=self.config.macd_signal, append=True)
 
-        bbp = df[f"BBP_{self.config.bb_length}_{self.config.bb_std}"]
+        # Normalize BBP column name for different pandas_ta versions
+        bbp_base = f"BBP_{self.config.bb_length}_{self.config.bb_std}"
+        if bbp_base not in df.columns:
+            bbp_alt = f"{bbp_base}_{self.config.bb_std}"
+            if bbp_alt in df.columns:
+                df[bbp_base] = df[bbp_alt]
+
+        bbp = df[bbp_base]
         macdh = df[f"MACDh_{self.config.macd_fast}_{self.config.macd_slow}_{self.config.macd_signal}"]
         macd = df[f"MACD_{self.config.macd_fast}_{self.config.macd_slow}_{self.config.macd_signal}"]
 
